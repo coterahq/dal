@@ -29,3 +29,9 @@ changelog:
     exclude:
       - '^docs:'
       - '^test:'
+brews:
+- name: dal
+  homepage: https://github.com/supasheet/homebrew-dal
+  tap:
+    owner: supasheet
+    name: homebrew-dal
