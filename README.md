@@ -7,6 +7,12 @@ It works by generating a GraphQL API from your dbt config files. GraphQL is
 widely supported and this makes it incredibly simple for other engineers to
 work with the data you have lovingly prepared.
 
+## Demo
+
+https://www.loom.com/share/68493cd7620045fd9f538066e245f1ef
+
+## How does it work?
+
 All you have to do is include a little bit of metadata to tell `dal` which models you would like to expose. You can then start the server from inside your dbt project, and that's it.
 
 To install `dal`, simply run:
