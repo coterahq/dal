@@ -3,7 +3,6 @@ package dal
 import (
 	"fmt"
 	"log"
-	"strings"
 
 	"github.com/doug-martin/goqu/v9"
 	_ "github.com/doug-martin/goqu/v9/dialect/postgres"
@@ -16,10 +15,16 @@ import (
 	"github.com/supasheet/dal/internal/warehouse"
 )
 
+func init() {
+	opts := goqu.DefaultDialectOptions()
+	// HACK: goqu forces you to quote identifiers but we don't really want
+	// that. So we use the 0 rune so that it is easy to remove later.
+	opts.QuoteRune = 0
+	goqu.RegisterDialect("snowflake", opts)
+}
+
 var (
-	// TODO goqu doesn't actually support Snowflake, but for the simple stuff
-	// we're doing this works fine for now.
-	dialect = goqu.Dialect("postgres")
+	dialect = goqu.Dialect("snowflake")
 
 	dirEnum = graphql.NewEnum(graphql.EnumConfig{
 		Name:        "direction",
@@ -171,9 +176,7 @@ func parseFilter(f interface{}) (map[string]map[string]interface{}, error) {
 func buildResolver(w warehouse.Client, node dbt.Node) graphql.FieldResolveFn {
 	return func(p graphql.ResolveParams) (interface{}, error) {
 		// Generate the SQL query
-		// TODO The uppercase name is snowflake specific and doesn't handle
-		// cases where the table was created with a quoted name.
-		q := dialect.From(strings.ToUpper(node.Name)).Select(getSelectedFields(p)...)
+		q := dialect.From(node.Name).Select(getSelectedFields(p)...)
 
 		// Handle filter
 		if f, ok := p.Args["filter"]; ok {
@@ -186,7 +189,7 @@ func buildResolver(w warehouse.Client, node dbt.Node) graphql.FieldResolveFn {
 			// Make a goqu Ex from it
 			wheres := make(goqu.Ex)
 			for field, condition := range filter {
-				wheres[strings.ToUpper(field)] = goqu.Op(condition)
+				wheres[field] = goqu.Op(condition)
 			}
 			q = q.Where(wheres)
 		}
@@ -195,7 +198,7 @@ func buildResolver(w warehouse.Client, node dbt.Node) graphql.FieldResolveFn {
 		if o, ok := p.Args["sort"]; ok {
 			var oes []exp.OrderedExpression
 			for field, dir := range o.(map[string]interface{}) {
-				c := goqu.C(strings.ToUpper(field))
+				c := goqu.C(field)
 				var oe exp.OrderedExpression
 				if dir == "asc" {
 					oe = c.Asc()
@@ -227,9 +230,31 @@ func buildResolver(w warehouse.Client, node dbt.Node) graphql.FieldResolveFn {
 		}
 
 		// Run it
-		log.Printf("Running query: %s", sql)
-		return w.Run(sql)
+		// HACK: goqu forces you to quote identifiers but we don't really want that for snowflake.
+		cleaned := cleanQuery(sql)
+		log.Printf("Running query: %s", cleaned)
+		return w.Run(cleaned)
 	}
+}
+
+func cleanQuery(query string) string {
+	var cleaned []rune
+	for _, r := range query {
+		if r != 0 {
+			cleaned = append(cleaned, r)
+		}
+	}
+	return string(cleaned)
+}
+
+func cleanQueryString(query string) string {
+	var cleaned []rune
+	for _, r := range query {
+		if r != 0 {
+			cleaned = append(cleaned, r)
+		}
+	}
+	return string(cleaned)
 }
 
 // Returns the list of request fields listed under provider selection path in the Graphql query.
@@ -267,9 +292,7 @@ func getSelectedFields(p graphql.ResolveParams) []interface{} {
 	var collect []interface{}
 
 	for _, field := range fields {
-		// TODO the uppercasing is snowflake specific and technically not even
-		// correct depending on how the the schema was created.
-		collect = append(collect, strings.ToUpper(field.Name.Value))
+		collect = append(collect, field.Name.Value)
 	}
 
 	return collect

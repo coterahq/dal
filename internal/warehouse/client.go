@@ -42,8 +42,10 @@ func rowsToRecords(rs *sql.Rows) (Records, error) {
 		// Ok, we're ready to build the map for this record
 		record := make(Record)
 		for i, c := range cols {
-			// TODO lowercasing is, again, snowflake specific and this doesn't
-			// deal with some edge cases.
+			// TODO: Lower casing the identifier names should probably not be
+			// handled here. The gql mapping layer is the bit htat cares about
+			// this and should force everything to be lowercase. Then again,
+			// it's an 'efficient' place to do it.
 			record[strings.ToLower(c)] = vals[i]
 		}
 		records = append(records, record)

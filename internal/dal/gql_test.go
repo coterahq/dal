@@ -42,25 +42,25 @@ func TestGenerateSql(t *testing.T) {
 
 	cases := []tc{
 		// Basic
-		{"one_field", `{foo {a}}`, `SELECT "A" FROM "FOO" LIMIT 500`},
-		{"many_fields", `{foo {a b c}}`, `SELECT "A", "B", "C" FROM "FOO" LIMIT 500`},
+		{"one_field", `{foo {a}}`, `SELECT a FROM foo LIMIT 500`},
+		{"many_fields", `{foo {a b c}}`, `SELECT a, b, c FROM foo LIMIT 500`},
 
 		// Limits and offsets
-		{"limit", `{foo(limit: 10) {a b c}}`, `SELECT "A", "B", "C" FROM "FOO" LIMIT 10`},
-		{"offset", `{foo(offset: 10) {a b c}}`, `SELECT "A", "B", "C" FROM "FOO" LIMIT 500 OFFSET 10`},
-		{"limit_offset", `{foo(limit: 10, offset: 10) {a b c}}`, `SELECT "A", "B", "C" FROM "FOO" LIMIT 10 OFFSET 10`},
+		{"limit", `{foo(limit: 10) {a b c}}`, `SELECT a, b, c FROM foo LIMIT 10`},
+		{"offset", `{foo(offset: 10) {a b c}}`, `SELECT a, b, c FROM foo LIMIT 500 OFFSET 10`},
+		{"limit_offset", `{foo(limit: 10, offset: 10) {a b c}}`, `SELECT a, b, c FROM foo LIMIT 10 OFFSET 10`},
 
 		// Filters
-		{"eq", `{foo(filter: {a: {eq: "z"}}) {a}}`, `SELECT "A" FROM "FOO" WHERE ("A" = 'z') LIMIT 500`},
-		{"neq", `{foo(filter: {a: {neq: "z"}}) {a}}`, `SELECT "A" FROM "FOO" WHERE ("A" != 'z') LIMIT 500`},
-		{"lt", `{foo(filter: {a: {lt: "z"}}) {a}}`, `SELECT "A" FROM "FOO" WHERE ("A" < 'z') LIMIT 500`},
-		{"lte", `{foo(filter: {a: {lte: "z"}}) {a}}`, `SELECT "A" FROM "FOO" WHERE ("A" <= 'z') LIMIT 500`},
-		{"gt", `{foo(filter: {a: {gt: "z"}}) {a}}`, `SELECT "A" FROM "FOO" WHERE ("A" > 'z') LIMIT 500`},
-		{"gte", `{foo(filter: {a: {gte: "z"}}) {a}}`, `SELECT "A" FROM "FOO" WHERE ("A" >= 'z') LIMIT 500`},
+		{"eq", `{foo(filter: {a: {eq: "z"}}) {a}}`, `SELECT a FROM foo WHERE (a = 'z') LIMIT 500`},
+		{"neq", `{foo(filter: {a: {neq: "z"}}) {a}}`, `SELECT a FROM foo WHERE (a != 'z') LIMIT 500`},
+		{"lt", `{foo(filter: {a: {lt: "z"}}) {a}}`, `SELECT a FROM foo WHERE (a < 'z') LIMIT 500`},
+		{"lte", `{foo(filter: {a: {lte: "z"}}) {a}}`, `SELECT a FROM foo WHERE (a <= 'z') LIMIT 500`},
+		{"gt", `{foo(filter: {a: {gt: "z"}}) {a}}`, `SELECT a FROM foo WHERE (a > 'z') LIMIT 500`},
+		{"gte", `{foo(filter: {a: {gte: "z"}}) {a}}`, `SELECT a FROM foo WHERE (a >= 'z') LIMIT 500`},
 
 		// Sort
-		{"asc", `{foo(sort: {a: asc}) {a}}`, `SELECT "A" FROM "FOO" ORDER BY "A" ASC LIMIT 500`},
-		{"desc", `{foo(sort: {a: desc}) {a}}`, `SELECT "A" FROM "FOO" ORDER BY "A" DESC LIMIT 500`},
+		{"asc", `{foo(sort: {a: asc}) {a}}`, `SELECT a FROM foo ORDER BY a ASC LIMIT 500`},
+		{"desc", `{foo(sort: {a: desc}) {a}}`, `SELECT a FROM foo ORDER BY a DESC LIMIT 500`},
 	}
 
 	for _, c := range cases {
