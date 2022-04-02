@@ -1,9 +1,10 @@
 module github.com/supasheet/dal
 
-go 1.17
+go 1.18
 
 require (
 	github.com/doug-martin/goqu/v9 v9.18.0
+	github.com/graph-gophers/dataloader v5.0.0+incompatible
 	github.com/graphql-go/graphql v0.8.0
 	github.com/graphql-go/handler v0.2.3
 	github.com/mitchellh/mapstructure v1.4.3
@@ -38,6 +39,7 @@ require (
 	github.com/jmespath/go-jmespath v0.4.0 // indirect
 	github.com/klauspost/compress v1.13.6 // indirect
 	github.com/mattn/go-ieproxy v0.0.1 // indirect
+	github.com/opentracing/opentracing-go v1.2.0 // indirect
 	github.com/pierrec/lz4/v4 v4.1.11 // indirect
 	github.com/pkg/browser v0.0.0-20210911075715-681adbf594b8 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect

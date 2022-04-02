@@ -8,8 +8,8 @@ import (
 	"github.com/graphql-go/graphql"
 	"github.com/spf13/cobra"
 
-	"github.com/supasheet/dal/internal/dal"
 	"github.com/supasheet/dal/internal/dbt"
+	"github.com/supasheet/dal/internal/gql"
 	"github.com/supasheet/dal/internal/warehouse"
 )
 
@@ -20,7 +20,10 @@ func introspectCmd(w warehouse.Client) *cobra.Command {
 		Long:  "Introspects and prints the GraphQL schema for your dbt project.",
 		Run: func(cmd *cobra.Command, args []string) {
 			nodes := dbt.Manifest()
-			schema := dal.BuildSchema(w, nodes)
+			schema, err := gql.BuildSchema(w, nodes)
+			if err != nil {
+				log.Fatalf("ERROR creating schema: %v", err)
+			}
 
 			result := graphql.Do(graphql.Params{
 				Schema:        *schema,

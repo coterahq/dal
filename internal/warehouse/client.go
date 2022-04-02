@@ -12,7 +12,7 @@ type Client interface {
 }
 
 type (
-	Record  map[string]interface{}
+	Record  map[string]any
 	Records []Record
 )
 
@@ -26,8 +26,8 @@ func rowsToRecords(rs *sql.Rows) (Records, error) {
 	// We need a buffer to store values as we construct the result map. We
 	// also need an array of pointers to each slot in that buffer, as
 	// that's how Scan works.
-	vals := make([]interface{}, len(cols))
-	ptrs := make([]interface{}, len(cols))
+	vals := make([]any, len(cols))
+	ptrs := make([]any, len(cols))
 	for i, _ := range vals {
 		ptrs[i] = &vals[i]
 	}

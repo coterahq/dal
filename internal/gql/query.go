@@ -1,4 +1,4 @@
-package dal
+package gql
 
 import (
 	"fmt"
@@ -41,44 +41,6 @@ var (
 		},
 	})
 )
-
-// Build a GraphQL schema from a list of of dbt nodes.
-func BuildSchema(w warehouse.Client, nodes []dbt.Node) *graphql.Schema {
-	fields := buildRoot(w, nodes)
-	rootQuery := graphql.ObjectConfig{Name: "RootQuery", Fields: fields}
-	schemaConfig := graphql.SchemaConfig{Query: graphql.NewObject(rootQuery)}
-
-	schema, err := graphql.NewSchema(schemaConfig)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	return &schema
-}
-
-func buildRoot(w warehouse.Client, nodes []dbt.Node) graphql.Fields {
-	fields := make(graphql.Fields)
-	for _, node := range nodes {
-		fields[node.Name] = &graphql.Field{
-			Description: node.Description,
-			Type:        graphql.NewList(buildType(node)),
-			Resolve:     buildResolver(w, node),
-			Args: graphql.FieldConfigArgument{
-				"limit": &graphql.ArgumentConfig{
-					Type:        graphql.Int,
-					Description: "Limit",
-				},
-				"offset": &graphql.ArgumentConfig{
-					Type:        graphql.Int,
-					Description: "Offset",
-				},
-				"filter": buildFilter(node),
-				"sort":   buildSort(node),
-			},
-		}
-	}
-	return fields
-}
 
 func buildFilter(node dbt.Node) *graphql.ArgumentConfig {
 	opFields := graphql.InputObjectConfigFieldMap{}
@@ -126,34 +88,8 @@ func buildSort(node dbt.Node) *graphql.ArgumentConfig {
 	}
 }
 
-func buildType(node dbt.Node) *graphql.Object {
-	fields := make(graphql.Fields)
-	for _, col := range node.Columns {
-		fields[col.Name] = &graphql.Field{
-			Type:        graphql.String,
-			Description: col.Description,
-		}
-	}
-
-	return graphql.NewObject(graphql.ObjectConfig{
-		Name:   node.Name,
-		Fields: fields,
-	})
-}
-
-//type Filter struct {
-//	Op  string      `json:"op"`
-//	Val interface{} `json:"val"`
-//}
-//
-//func (f Filter) Fragment() goqu.Ex {
-//	return goqu.Ex{
-//		f.Field: goqu.Op{f.Op: f.Val},
-//	}
-//}
-
-func parseFilter(f interface{}) (map[string]map[string]interface{}, error) {
-	var filter map[string]map[string]interface{}
+func parseFilter(f any) (map[string]map[string]any, error) {
+	var filter map[string]map[string]any
 	config := &mapstructure.DecoderConfig{
 		Metadata: nil,
 		Result:   &filter,
@@ -174,9 +110,9 @@ func parseFilter(f interface{}) (map[string]map[string]interface{}, error) {
 }
 
 func buildResolver(w warehouse.Client, node dbt.Node) graphql.FieldResolveFn {
-	return func(p graphql.ResolveParams) (interface{}, error) {
+	return func(p graphql.ResolveParams) (any, error) {
 		// Generate the SQL query
-		q := dialect.From(node.Name).Select(getSelectedFields(p)...)
+		q := dialect.From(node.Name).Select(getSelectedFields(node.Config.Meta.Dal.PrimaryKey, p)...)
 
 		// Handle filter
 		if f, ok := p.Args["filter"]; ok {
@@ -197,7 +133,7 @@ func buildResolver(w warehouse.Client, node dbt.Node) graphql.FieldResolveFn {
 		// Handle sort
 		if o, ok := p.Args["sort"]; ok {
 			var oes []exp.OrderedExpression
-			for field, dir := range o.(map[string]interface{}) {
+			for field, dir := range o.(map[string]any) {
 				c := goqu.C(field)
 				var oe exp.OrderedExpression
 				if dir == "asc" {
@@ -247,18 +183,10 @@ func cleanQuery(query string) string {
 	return string(cleaned)
 }
 
-func cleanQueryString(query string) string {
-	var cleaned []rune
-	for _, r := range query {
-		if r != 0 {
-			cleaned = append(cleaned, r)
-		}
-	}
-	return string(cleaned)
-}
-
-// Returns the list of request fields listed under provider selection path in the Graphql query.
-func getSelectedFields(p graphql.ResolveParams) []interface{} {
+// Returns the list of requested fields from the current part of the query.  It
+// requires us to specify the pk to ensure that it's always present in the
+// result.
+func getSelectedFields(pk string, p graphql.ResolveParams) []any {
 	var selectionPath []string
 	for _, part := range p.Info.Path.AsArray() {
 		selectionPath = append(selectionPath, part.(string))
@@ -275,7 +203,13 @@ func getSelectedFields(p graphql.ResolveParams) []interface{} {
 				fields = make([]*ast.Field, 0)
 
 				for _, selection := range selections {
-					fields = append(fields, selection.(*ast.Field))
+					// We only want 'raw' fields to be included in this sql
+					// query. Foreign Keys are resolved differently, so we only
+					// add it in if it does not have a selection set of its
+					// own.
+					if selection.GetSelectionSet() == nil {
+						fields = append(fields, selection.(*ast.Field))
+					}
 				}
 
 				found = true
@@ -285,14 +219,16 @@ func getSelectedFields(p graphql.ResolveParams) []interface{} {
 		}
 
 		if !found {
-			return []interface{}{}
+			return []any{}
 		}
 	}
 
-	var collect []interface{}
-
+	collect := []any{pk}
 	for _, field := range fields {
-		collect = append(collect, field.Name.Value)
+		n := field.Name.Value
+		if n != pk {
+			collect = append(collect, n)
+		}
 	}
 
 	return collect

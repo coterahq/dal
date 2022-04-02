@@ -4,8 +4,8 @@ import (
 	"log"
 
 	"github.com/spf13/cobra"
-	"github.com/supasheet/dal/internal/dal"
 	"github.com/supasheet/dal/internal/dbt"
+	"github.com/supasheet/dal/internal/gql"
 	"github.com/supasheet/dal/internal/warehouse"
 )
 
@@ -17,10 +17,14 @@ func serveCmd(w warehouse.Client) *cobra.Command {
 		Run: func(cmd *cobra.Command, args []string) {
 			// Inspect the manifest and build a schema
 			nodes := dbt.Manifest()
-			schema := dal.BuildSchema(w, nodes)
+			schema, err := gql.BuildSchema(w, nodes)
+			if err != nil {
+				log.Fatalf("ERROR creating schema: %v", err)
+			}
+
 			log.Print("Starting dal server on port 8080")
 			log.Print("GraphiQL available at http://localhost:8080/graphql")
-			dal.Serve(schema)
+			gql.Serve(schema)
 		},
 	}
 }
