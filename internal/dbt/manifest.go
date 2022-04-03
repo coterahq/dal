@@ -8,7 +8,7 @@ import (
 	"github.com/mitchellh/mapstructure"
 )
 
-func Manifest() []Node {
+func LoadManifestNodes() []Node {
 	// Look for the manifest in the default location
 	f, err := os.Open("./target/manifest.json")
 	if err != nil {

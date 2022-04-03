@@ -8,7 +8,7 @@ import (
 	"github.com/graphql-go/graphql"
 	"github.com/stretchr/testify/assert"
 
-	"github.com/supasheet/dal/internal/dbt"
+	"github.com/supasheet/dal/internal/dal"
 	"github.com/supasheet/dal/internal/gql"
 	"github.com/supasheet/dal/internal/warehouse"
 )
@@ -19,6 +19,8 @@ type mockClient struct {
 }
 
 type r warehouse.Records
+
+func (mc *mockClient) Connect() error { return nil }
 
 func (mc *mockClient) Run(query string) (warehouse.Records, error) {
 	mc.queries = append(mc.queries, query)
@@ -32,30 +34,26 @@ func (mc *mockClient) Run(query string) (warehouse.Records, error) {
 	return warehouse.Records(next), nil
 }
 
-var schema = []dbt.Node{
-	{
-		Name: "foo", Columns: map[string]dbt.Column{
-			"a": {Name: "a"},
-			"b": {Name: "b"},
-			"c": {Name: "c"},
+var schema = dal.Schema{
+	"foo": &dal.Model{
+		Name:       "foo",
+		PrimaryKey: "a",
+		Columns: []dal.Column{
+			{Name: "a"},
+			{Name: "b"},
+			{Name: "c"},
 		},
 	},
-	{
-		Name: "bar",
-		Config: dbt.NodeConfig{
-			Meta: dbt.NodeMeta{
-				Dal: dbt.DalNodeConfig{
-					PrimaryKey: "x",
-					ForeignKeys: []dbt.DalFK{
-						{Model: "foo", LeftOn: "x", RightOn: "a"},
-					},
-				},
-			},
+	"bar": &dal.Model{
+		Name:       "bar",
+		PrimaryKey: "x",
+		ForeignKeys: []dal.ForeignKey{
+			{Model: "foo", On: "a"},
 		},
-		Columns: map[string]dbt.Column{
-			"x": {Name: "x"},
-			"y": {Name: "y"},
-			"z": {Name: "z"},
+		Columns: []dal.Column{
+			{Name: "x"},
+			{Name: "y"},
+			{Name: "z"},
 		},
 	},
 }

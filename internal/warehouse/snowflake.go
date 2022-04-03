@@ -7,16 +7,17 @@ import (
 )
 
 type SnowflakeClient struct {
-	db *sql.DB
+	db    *sql.DB
+	creds SnowflakeCredentials
 }
 
-func NewSnowflake() *SnowflakeClient {
-	return &SnowflakeClient{}
+func NewSnowflake(sfc SnowflakeCredentials) *SnowflakeClient {
+	return &SnowflakeClient{creds: sfc}
 }
 
-func (sc *SnowflakeClient) Connect(sfc SnowflakeCredentials) error {
+func (sc *SnowflakeClient) Connect() error {
 	// Create the db instance
-	dsn, err := sfc.ConnString()
+	dsn, err := sc.creds.ConnString()
 	if err != nil {
 		return err
 	}

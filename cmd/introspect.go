@@ -10,23 +10,27 @@ import (
 
 	"github.com/supasheet/dal/internal/dbt"
 	"github.com/supasheet/dal/internal/gql"
-	"github.com/supasheet/dal/internal/warehouse"
 )
 
-func introspectCmd(w warehouse.Client) *cobra.Command {
+func introspectCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "introspect",
 		Short: "Introspect your dal api schema",
 		Long:  "Introspects and prints the GraphQL schema for your dbt project.",
 		Run: func(cmd *cobra.Command, args []string) {
-			nodes := dbt.Manifest()
-			schema, err := gql.BuildSchema(w, nodes)
+			// Inspect the manifest and build a schema
+			dalSchema, client, err := dbt.Inspect()
+			if err != nil {
+				log.Fatalf("ERROR loading dbt project: %v", err)
+			}
+
+			gqlSchema, err := gql.BuildSchema(client, dalSchema)
 			if err != nil {
 				log.Fatalf("ERROR creating schema: %v", err)
 			}
 
 			result := graphql.Do(graphql.Params{
-				Schema:        *schema,
+				Schema:        *gqlSchema,
 				RequestString: introspectionQuery,
 			})
 

@@ -17,15 +17,15 @@ func setupSnowflake(t *testing.T) warehouse.Client {
 	c := os.Getenv("E2E_SNOWFLAKE_CREDENTIALS")
 	decoded, err := base64.StdEncoding.DecodeString(c)
 	require.NoError(t, err)
-	sc := warehouse.NewSnowflake()
 
 	// Parse json
 	var creds warehouse.SnowflakeCredentials
 	err = json.Unmarshal(decoded, &creds)
 	require.NoError(t, err)
+	sc := warehouse.NewSnowflake(creds)
 
 	// Connect
-	err = sc.Connect(creds)
+	err = sc.Connect()
 	require.NoError(t, err)
 
 	return sc

@@ -11,7 +11,7 @@ import (
 	"github.com/graphql-go/graphql/language/ast"
 	"github.com/mitchellh/mapstructure"
 
-	"github.com/supasheet/dal/internal/dbt"
+	"github.com/supasheet/dal/internal/dal"
 	"github.com/supasheet/dal/internal/warehouse"
 )
 
@@ -42,7 +42,7 @@ var (
 	})
 )
 
-func buildFilter(node dbt.Node) *graphql.ArgumentConfig {
+func buildFilter(model *dal.Model) *graphql.ArgumentConfig {
 	opFields := graphql.InputObjectConfigFieldMap{}
 	for _, op := range []string{"eq", "neq", "lt", "gt", "lte", "gte"} {
 		opFields[op] = &graphql.InputObjectFieldConfig{
@@ -51,11 +51,11 @@ func buildFilter(node dbt.Node) *graphql.ArgumentConfig {
 		}
 	}
 	iocfm := graphql.InputObjectConfigFieldMap{}
-	for _, col := range node.Columns {
+	for _, col := range model.Columns {
 		iocfm[col.Name] = &graphql.InputObjectFieldConfig{
 			Type: graphql.NewInputObject(
 				graphql.InputObjectConfig{
-					Name:   fmt.Sprintf("filter_%s_%s", node.Name, col.Name),
+					Name:   fmt.Sprintf("filter_%s_%s", model.Name, col.Name),
 					Fields: opFields,
 				},
 			),
@@ -64,16 +64,16 @@ func buildFilter(node dbt.Node) *graphql.ArgumentConfig {
 
 	return &graphql.ArgumentConfig{
 		Type: graphql.NewInputObject(graphql.InputObjectConfig{
-			Name:   fmt.Sprintf("%s_filter", node.Name),
+			Name:   fmt.Sprintf("%s_filter", model.Name),
 			Fields: iocfm,
 		}),
 		Description: "Filter",
 	}
 }
 
-func buildSort(node dbt.Node) *graphql.ArgumentConfig {
+func buildSort(model *dal.Model) *graphql.ArgumentConfig {
 	iocfm := graphql.InputObjectConfigFieldMap{}
-	for _, col := range node.Columns {
+	for _, col := range model.Columns {
 		iocfm[col.Name] = &graphql.InputObjectFieldConfig{
 			Type: dirEnum,
 		}
@@ -81,7 +81,7 @@ func buildSort(node dbt.Node) *graphql.ArgumentConfig {
 
 	return &graphql.ArgumentConfig{
 		Type: graphql.NewInputObject(graphql.InputObjectConfig{
-			Name:   fmt.Sprintf("%s_sort", node.Name),
+			Name:   fmt.Sprintf("%s_sort", model.Name),
 			Fields: iocfm,
 		}),
 		Description: "Sort",
@@ -109,10 +109,10 @@ func parseFilter(f any) (map[string]map[string]any, error) {
 	return filter, nil
 }
 
-func buildResolver(w warehouse.Client, node dbt.Node) graphql.FieldResolveFn {
+func buildResolver(w warehouse.Client, model *dal.Model) graphql.FieldResolveFn {
 	return func(p graphql.ResolveParams) (any, error) {
 		// Generate the SQL query
-		q := dialect.From(node.Name).Select(getSelectedFields(node.Config.Meta.Dal.PrimaryKey, p)...)
+		q := dialect.From(model.Name).Select(getSelectedFields(model.PrimaryKey, p)...)
 
 		// Handle filter
 		if f, ok := p.Args["filter"]; ok {

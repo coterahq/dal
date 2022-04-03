@@ -9,6 +9,9 @@ type Client interface {
 	// TODO this is a convenient but not ideal interface. It pulls all the
 	// results back into memory and it's better to stream!
 	Run(string) (Records, error)
+
+	// Initialises the data warehosue connection.
+	Connect() error
 }
 
 type (
