@@ -2,16 +2,23 @@ package warehouse
 
 import (
 	"database/sql"
+	"regexp"
 	"strings"
+
+	"github.com/supasheet/dal/internal/dal"
 )
 
 type Client interface {
+	// Initialises the data warehosue connection.
+	Connect() error
+
 	// TODO this is a convenient but not ideal interface. It pulls all the
 	// results back into memory and it's better to stream!
 	Run(string) (Records, error)
 
-	// Initialises the data warehosue connection.
-	Connect() error
+	// Maps a type from the data warehouse's type system to the appropriate dal
+	// type.
+	MapType(string) dal.Scalar
 }
 
 type (
@@ -24,6 +31,13 @@ func rowsToRecords(rs *sql.Rows) (Records, error) {
 	cols, err := rs.Columns()
 	if err != nil {
 		return nil, err
+	}
+	// TODO: Lower casing the identifier names should probably not be
+	// handled here. The gql mapping layer is the bit htat cares about
+	// this and should force everything to be lowercase. Then again,
+	// it's an 'efficient' place to do it.
+	for i := 0; i < len(cols); i++ {
+		cols[i] = strings.ToLower(cols[i])
 	}
 
 	// We need a buffer to store values as we construct the result map. We
@@ -45,13 +59,37 @@ func rowsToRecords(rs *sql.Rows) (Records, error) {
 		// Ok, we're ready to build the map for this record
 		record := make(Record)
 		for i, c := range cols {
-			// TODO: Lower casing the identifier names should probably not be
-			// handled here. The gql mapping layer is the bit htat cares about
-			// this and should force everything to be lowercase. Then again,
-			// it's an 'efficient' place to do it.
-			record[strings.ToLower(c)] = vals[i]
+			record[c] = vals[i]
 		}
 		records = append(records, record)
 	}
 	return records, nil
+}
+
+type dataTypeMatcher struct {
+	id       *regexp.Regexp
+	int      *regexp.Regexp
+	float    *regexp.Regexp
+	boolean  *regexp.Regexp
+	string   *regexp.Regexp
+	dateTime *regexp.Regexp
+}
+
+func (dtm *dataTypeMatcher) match(raw string) dal.Scalar {
+	switch {
+	case dtm.id.MatchString(raw):
+		return dal.ID
+	case dtm.int.MatchString(raw):
+		return dal.Int
+	case dtm.float.MatchString(raw):
+		return dal.Float
+	case dtm.boolean.MatchString(raw):
+		return dal.Boolean
+	case dtm.string.MatchString(raw):
+		return dal.String
+	case dtm.dateTime.MatchString(raw):
+		return dal.DateTime
+	default:
+		return dal.String
+	}
 }

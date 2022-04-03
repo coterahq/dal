@@ -66,28 +66,48 @@ func (sb *schemaBuilder) build() (*graphql.Schema, error) {
 // with no foreign key information.
 func (sb *schemaBuilder) resolveTypes() {
 	for name, model := range sb.schema {
+		model := model
 		// For each node we simply look at all of the columns in the manifest,
 		// and create a field for each one.
 		fields := make(graphql.Fields)
 		for _, col := range model.Columns {
 			fields[col.Name] = &graphql.Field{
-				// TODO this currently says every field is a string, which is wrong.
-				// We can leverage the dbt catalog to get the information.
-				Type: graphql.String,
+				// Map the dal type to the appropriate GrahpQL type.
+				Type: mapScalarType(col.Type),
 				// Bring through the description from the model.
 				Description: col.Description,
 			}
 		}
 
 		sb.types[name] = graphql.NewObject(graphql.ObjectConfig{
-			Name:   name,
-			Fields: fields,
+			Name:        name,
+			Description: model.Description,
+			Fields:      fields,
 		})
 	}
 
 	// Now we've completed the first pass through the types, we should go
 	// through and add in the foreign keys.
 	sb.resolveForeignKeys()
+}
+
+func mapScalarType(ds dal.Scalar) *graphql.Scalar {
+	switch ds {
+	case dal.ID:
+		return graphql.ID
+	case dal.Int:
+		return graphql.Int
+	case dal.Float:
+		return graphql.Float
+	case dal.Boolean:
+		return graphql.Boolean
+	case dal.String:
+		return graphql.String
+	case dal.DateTime:
+		return graphql.DateTime
+	default:
+		return graphql.String
+	}
 }
 
 // This must be called after resolving the types and loaders. It will make a

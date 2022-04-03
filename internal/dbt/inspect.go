@@ -43,12 +43,13 @@ func Inspect() (dal.Schema, warehouse.Client, error) {
 		// Add the model
 		model := schema.AddModel(node.Name, node.Description, node.Config.Meta.Dal.PrimaryKey)
 		for _, col := range node.Columns {
+			// Before creating the column we need to look up the appropriate
+			// type for it from the schema.
 			colType, err := catalog.typeOfColumn(node.UniqueID, col.Name)
 			if err != nil {
 				return nil, nil, err
 			}
-			fmt.Printf("model: %s   col: %s   type: %s\n", model.Name, col.Name, colType)
-			model.AddColumn(col.Name, col.Description, dal.String)
+			model.AddColumn(col.Name, col.Description, client.MapType(colType))
 		}
 	}
 

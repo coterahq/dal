@@ -44,7 +44,7 @@ var (
 type Schema map[string]*Model
 
 func (s Schema) AddModel(name, description, pk string) *Model {
-	m := &Model{Name: name, PrimaryKey: pk, schema: s}
+	m := &Model{Name: name, Description: description, PrimaryKey: pk, schema: s}
 	s[name] = m
 	return m
 }
@@ -54,8 +54,8 @@ func (s Schema) AddModel(name, description, pk string) *Model {
 // the models relate to each other.
 type Model struct {
 	Name        string
-	PrimaryKey  string
 	Description string
+	PrimaryKey  string
 	Columns     []Column
 	ForeignKeys []ForeignKey
 
