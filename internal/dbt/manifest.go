@@ -8,7 +8,7 @@ import (
 	"github.com/mitchellh/mapstructure"
 )
 
-func Manifest() []Node {
+func LoadManifestNodes() []Node {
 	// Look for the manifest in the default location
 	f, err := os.Open("./target/manifest.json")
 	if err != nil {
@@ -17,7 +17,7 @@ func Manifest() []Node {
 	defer f.Close()
 
 	// Decode the manifest
-	var dbtManifest map[string]interface{}
+	var dbtManifest map[string]any
 	err = json.NewDecoder(f).Decode(&dbtManifest)
 	if err != nil {
 		log.Fatal(err)
@@ -32,7 +32,7 @@ func Manifest() []Node {
 	// Look through all the nodes, we're only interested in models which have
 	// been configured for dal to expose.
 	var exposed []Node
-	for _, n := range nodes.(map[string]interface{}) {
+	for _, n := range nodes.(map[string]any) {
 		var node Node
 		config := &mapstructure.DecoderConfig{
 			Metadata: nil,
@@ -63,8 +63,8 @@ type Node struct {
 	Compiled     bool   `json:"compiled"`
 	ResourceType string `json:"resource_type"`
 	DependsOn    struct {
-		Macros []interface{} `json:"macros"`
-		Nodes  []string      `json:"nodes"`
+		Macros []any    `json:"macros"`
+		Nodes  []string `json:"nodes"`
 	} `json:"depends_on"`
 	Config           NodeConfig `json:"config"`
 	Database         string     `json:"database"`
@@ -81,9 +81,9 @@ type Node struct {
 		Name     string `json:"name"`
 		Checksum string `json:"checksum"`
 	} `json:"checksum"`
-	Tags        []interface{}     `json:"tags"`
+	Tags        []any             `json:"tags"`
 	Refs        [][]string        `json:"refs"`
-	Sources     []interface{}     `json:"sources"`
+	Sources     []any             `json:"sources"`
 	Description string            `json:"description"`
 	Columns     map[string]Column `json:"columns"`
 	Meta        struct {
@@ -91,44 +91,54 @@ type Node struct {
 	Docs struct {
 		Show bool `json:"show"`
 	} `json:"docs"`
-	PatchPath        string      `json:"patch_path"`
-	CompiledPath     string      `json:"compiled_path"`
-	BuildPath        interface{} `json:"build_path"`
-	Deferred         bool        `json:"deferred"`
+	PatchPath        string `json:"patch_path"`
+	CompiledPath     string `json:"compiled_path"`
+	BuildPath        any    `json:"build_path"`
+	Deferred         bool   `json:"deferred"`
 	UnrenderedConfig struct {
 		Materialized string `json:"materialized"`
 	} `json:"unrendered_config"`
-	CreatedAt         float64       `json:"created_at"`
-	CompiledSql       string        `json:"compiled_sql"`
-	ExtraCtesInjected bool          `json:"extra_ctes_injected"`
-	ExtraCtes         []interface{} `json:"extra_ctes"`
-	RelationName      string        `json:"relation_name"`
+	CreatedAt         float64 `json:"created_at"`
+	CompiledSql       string  `json:"compiled_sql"`
+	ExtraCtesInjected bool    `json:"extra_ctes_injected"`
+	ExtraCtes         []any   `json:"extra_ctes"`
+	RelationName      string  `json:"relation_name"`
 }
 
 type NodeConfig struct {
-	Enabled  bool          `json:"enabled"`
-	Alias    interface{}   `json:"alias"`
-	Schema   interface{}   `json:"schema"`
-	Database interface{}   `json:"database"`
-	Tags     []interface{} `json:"tags"`
-	Meta     struct {
-		Dal DalNodeConfig `json:"dal"`
-	} `json:"meta"`
-	Materialized string `json:"materialized"`
+	Enabled      bool     `json:"enabled"`
+	Alias        any      `json:"alias"`
+	Schema       any      `json:"schema"`
+	Database     any      `json:"database"`
+	Tags         []any    `json:"tags"`
+	Meta         NodeMeta `json:"meta"`
+	Materialized string   `json:"materialized"`
 	PersistDocs  struct {
 	} `json:"persist_docs"`
 	Quoting struct {
 	} `json:"quoting"`
 	ColumnTypes struct {
 	} `json:"column_types"`
-	FullRefresh    interface{}   `json:"full_refresh"`
-	OnSchemaChange string        `json:"on_schema_change"`
-	PostHook       []interface{} `json:"post-hook"`
-	PreHook        []interface{} `json:"pre-hook"`
+	FullRefresh    any    `json:"full_refresh"`
+	OnSchemaChange string `json:"on_schema_change"`
+	PostHook       []any  `json:"post-hook"`
+	PreHook        []any  `json:"pre-hook"`
+}
+
+type NodeMeta struct {
+	Dal DalNodeConfig `json:"dal"`
 }
 
 type DalNodeConfig struct {
-	Expose bool `json:"expose"`
+	Expose      bool    `json:"expose"`
+	PrimaryKey  string  `json:"primary_key"`
+	ForeignKeys []DalFK `json:"foreign_keys"`
+}
+
+type DalFK struct {
+	Model   string `json:"model"`
+	LeftOn  string `json:"left_on"`
+	RightOn string `json:"right_on"`
 }
 
 type Column struct {
@@ -136,7 +146,7 @@ type Column struct {
 	Description string `json:"description"`
 	Meta        struct {
 	} `json:"meta"`
-	DataType interface{}   `json:"data_type"`
-	Quote    interface{}   `json:"quote"`
-	Tags     []interface{} `json:"tags"`
+	DataType any   `json:"data_type"`
+	Quote    any   `json:"quote"`
+	Tags     []any `json:"tags"`
 }

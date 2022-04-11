@@ -1,16 +1,8 @@
 package dbt
 
-import (
-	"log"
-	"os"
-	"path/filepath"
+type Profiles map[string]Profile
 
-	"gopkg.in/yaml.v2"
-)
-
-type DbtProfiles map[string]DbtProfile
-
-type DbtProfile struct {
+type Profile struct {
 	Target  string            `json:"target"`
 	Outputs map[string]Output `json:"outputs"`
 }
@@ -32,29 +24,4 @@ type Output struct {
 	ConnectTimeout         int    `json:"connect_timeout"`
 	RetryOnDatabaseErrors  bool   `json:"retry_on_database_errors"`
 	RetryAll               bool   `json:"retry_all"`
-}
-
-func Profile(profile string) DbtProfile {
-	// Find the home directory
-	home, err := os.UserHomeDir()
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	// Open the profile file
-	f, err := os.Open(filepath.Join(home, ".dbt", "profiles.yml"))
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer f.Close()
-
-	// Load the profiles
-	var profiles DbtProfiles
-	err = yaml.NewDecoder(f).Decode(&profiles)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	// Return the selected profile
-	return profiles[profile]
 }
